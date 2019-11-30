@@ -10,6 +10,8 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"mime"
+	"mime/multipart"
 	"net/http"
 	"net/mail"
 	url2 "net/url"
@@ -20,24 +22,24 @@ import (
 )
 
 // The Backend implements SMTP server methods.
-type Backend struct {conf Conf}
+type Backend struct{ conf Conf }
 
 type Conf struct {
-	ProxyTgm struct{
-		Ip string
+	ProxyTgm struct {
+		Ip   string
 		Port int
 	} `yaml:"proxy_tgm"`
-	SmtpServer struct{
-		Port int
+	SmtpServer struct {
+		Port  int
 		Debug bool
 	} `yaml:"smtp_server"`
-	TgmToken string `yaml:"tgm_token_bot"`
+	TgmToken     string `yaml:"tgm_token_bot"`
 	TgmParseMode string `yaml:"tgm_parse_mode"`
-	NotifyChats map[string]struct{
-		Email string `yaml:"email"`
-		ChatId string `yaml:"chat_id"`
-		WebPagePreview bool `yaml:"web_page_preview"`
-		Notification bool `yaml:"notification"`
+	NotifyChats  map[string]struct {
+		Email          string `yaml:"email"`
+		ChatId         string `yaml:"chat_id"`
+		WebPagePreview bool   `yaml:"web_page_preview"`
+		Notification   bool   `yaml:"notification"`
 	} `yaml:"notify_chats"`
 }
 
@@ -81,7 +83,7 @@ func (bkd *Backend) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, e
 }
 
 // A Session is returned after successful login.
-type Session struct{conf Conf}
+type Session struct{ conf Conf }
 
 func (s *Session) Mail(from string) error {
 	log.Println("Mail from:", from)
@@ -98,12 +100,24 @@ func (s *Session) Data(r io.Reader) error {
 	if err1 != nil {
 		return err1
 	}
-	textArr, err2 := ioutil.ReadAll(msg.Body)
+	mediaType, params, err11 := mime.ParseMediaType(msg.Header.Get("Content-Type"))
+	if err11 != nil {
+		return err11
+	}
+	var body string
+	var err2 error
+	if strings.HasPrefix(mediaType, "multipart/") {
+		body, err2 = findHtmlPart(multipart.NewReader(msg.Body, params["boundary"]))
+	} else {
+		var textArr []byte
+		textArr, err2 = ioutil.ReadAll(msg.Body)
+		body = string(textArr)
+	}
 	if err2 != nil {
 		return err2
 	}
 	prm := msg.Header
-	text, err3 := DecodeUTF8(string(textArr))
+	text, err3 := DecodeUTF8(body)
 	if err3 != nil {
 		return err3
 	}
@@ -111,11 +125,11 @@ func (s *Session) Data(r io.Reader) error {
 	log.Printf("%+v; %+v\n", prm, text)
 
 	to := prm["To"][0]
-	sbj, err3 := DecodeUTF8(prm["Subject"][0])
+	decoder := new(mime.WordDecoder)
+	sbj, err3 := decoder.DecodeHeader(prm["Subject"][0])
 	if err3 != nil {
 		return err3
 	}
-
 
 	text = strings.ReplaceAll(text, "<br />", "\n")
 
@@ -130,7 +144,7 @@ func (s *Session) Data(r io.Reader) error {
 	var err error
 
 	cnt := len(s.conf.NotifyChats)
-	for key, value := range  s.conf.NotifyChats {
+	for key, value := range s.conf.NotifyChats {
 		fmt.Printf("key: %+v; value: %+v ", key, value)
 		cnt -= 1
 		fmt.Println(cnt)
@@ -186,6 +200,28 @@ func (s *Session) Data(r io.Reader) error {
 	return nil
 }
 
+func findHtmlPart(reader *multipart.Reader) (string, error) {
+	for {
+		p, err := reader.NextPart()
+		//if err == io.EOF {
+		//	return "", io.EOF
+		//}
+		if err != nil {
+			return "", err
+		}
+
+		content, err := ioutil.ReadAll(p)
+		if err != nil {
+			return "", err
+		}
+
+		isHtml := strings.HasPrefix(p.Header.Get("Content-Type"), "text/html;")
+		if isHtml {
+			return string(content), nil
+		}
+	}
+}
+
 func (s *Session) Reset() {}
 
 func (s *Session) Logout() error {
@@ -239,7 +275,7 @@ func main() {
 	}
 	be := &Backend{*conf}
 	serv := smtp.NewServer(be)
-	serv.Addr = ":" + strconv.Itoa(conf.SmtpServer.Port)//":1025"
+	serv.Addr = ":" + strconv.Itoa(conf.SmtpServer.Port) //":1025"
 	serv.Domain = "localhost"
 	serv.ReadTimeout = 10 * time.Second
 	serv.WriteTimeout = 10 * time.Second
