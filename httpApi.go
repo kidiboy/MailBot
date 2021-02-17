@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 )
@@ -17,7 +16,8 @@ type BodyToTgm struct {
 
 func serverHttpStart(conf Conf) {
 	httpPortStr := ":" + strconv.Itoa(conf.HttpServer.Port)
-	log.Println(httpPortStr)
+	httpLog.Infof("Starting HTTP server at %s port", httpPortStr)
+	//log.Println(httpPortStr)
 	server := http.NewServeMux()
 	// example:
 	// url: http://192.168.1.1:80/toTgm
@@ -27,19 +27,22 @@ func serverHttpStart(conf Conf) {
 
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			log.Println(err)
+			httpLog.Error(err)
+			//log.Println(err)
 		}
 		var bodyDecode BodyToTgm
 		err = json.Unmarshal(body, &bodyDecode)
 		if err != nil {
-			log.Println(err)
+			httpLog.Error(err)
+			//log.Println(err)
 		}
 
-		sendToTgm(bodyDecode.Subject, bodyDecode.Text, conf, bodyDecode.To)
+		sendToTgm(bodyDecode.Subject, bodyDecode.Text, conf, bodyDecode.To, httpLog)
 
 	})
 	err := http.ListenAndServe(httpPortStr, server)
 	if err != nil {
-		log.Println(err)
+		httpLog.Error(err)
+		//log.Println(err)
 	}
 }

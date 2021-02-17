@@ -8,7 +8,6 @@ import (
 	"github.com/emersion/go-smtp"
 	"io"
 	"io/ioutil"
-	"log"
 	"mime"
 	"mime/multipart"
 	"net/mail"
@@ -40,12 +39,12 @@ func (bkd *Backend) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, e
 }
 
 func (s *Session) Mail(from string) error {
-	log.Println("Mail from:", from)
+	smtpLog.Debugf("Mail from: %s", from)
 	return nil
 }
 
 func (s *Session) Rcpt(to string) error {
-	log.Println("Rcpt to:", to)
+	smtpLog.Debugf("Rcpt to: %s", to)
 	return nil
 }
 
@@ -76,7 +75,7 @@ func (s *Session) Data(r io.Reader) error {
 		return err3
 	}
 	//prm, text := ParseMsg(r)
-	log.Printf("%+v; %+v\n", prm, text)
+	smtpLog.Debugf("Header: %+v; Body: %+v\n", prm, text)
 
 	to := prm["To"][0]
 	decoder := new(mime.WordDecoder)
@@ -89,7 +88,7 @@ func (s *Session) Data(r io.Reader) error {
 
 	conf := s.conf
 
-	sendToTgm(sbj, text, conf, to)
+	sendToTgm(sbj, text, conf, to, smtpLog)
 
 	return nil
 }
@@ -171,12 +170,12 @@ func serverSmtpStart(conf Conf) {
 	serv.MaxMessageBytes = 1024 * 1024
 	serv.MaxRecipients = 50
 	serv.AllowInsecureAuth = true
-	if conf.SmtpServer.Debug {
+	if strings.ToUpper(conf.SmtpServer.LogLvl) == "DEBUG" {
 		serv.Debug = os.Stdout
 	}
 
-	log.Println("Starting server at", serv.Addr)
+	smtpLog.Infof("Starting SMTP server at %s port", serv.Addr)
 	if err := serv.ListenAndServe(); err != nil {
-		log.Fatal(err)
+		smtpLog.Fatal(err)
 	}
 }
