@@ -17,7 +17,6 @@ type BodyToTgm struct {
 func serverHttpStart(conf Conf) {
 	httpPortStr := ":" + strconv.Itoa(conf.HttpServer.Port)
 	httpLog.Infof("Starting HTTP server at %s port", httpPortStr)
-	//log.Println(httpPortStr)
 	server := http.NewServeMux()
 	// example:
 	// url: http://192.168.1.1:80/toTgm
@@ -28,13 +27,11 @@ func serverHttpStart(conf Conf) {
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			httpLog.Error(err)
-			//log.Println(err)
 		}
 		var bodyDecode BodyToTgm
 		err = json.Unmarshal(body, &bodyDecode)
 		if err != nil {
 			httpLog.Error(err)
-			//log.Println(err)
 		}
 
 		sendToTgm(bodyDecode.Subject, bodyDecode.Text, conf, bodyDecode.To, httpLog)
@@ -43,6 +40,5 @@ func serverHttpStart(conf Conf) {
 	err := http.ListenAndServe(httpPortStr, server)
 	if err != nil {
 		httpLog.Error(err)
-		//log.Println(err)
 	}
 }

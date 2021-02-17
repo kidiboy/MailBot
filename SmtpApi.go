@@ -33,7 +33,6 @@ func (bkd *Backend) Login(state *smtp.ConnectionState, username, password string
 
 // AnonymousLogin requires clients to authenticate using SMTP AUTH before sending emails
 func (bkd *Backend) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
-	//return nil, smtp.ErrAuthRequired
 	return &Session{bkd.conf}, nil
 	//
 }
@@ -74,7 +73,6 @@ func (s *Session) Data(r io.Reader) error {
 	if err3 != nil {
 		return err3
 	}
-	//prm, text := ParseMsg(r)
 	smtpLog.Debugf("Header: %+v; Body: %+v\n", prm, text)
 
 	to := prm["To"][0]
@@ -96,9 +94,6 @@ func (s *Session) Data(r io.Reader) error {
 func findHtmlPart(reader *multipart.Reader) (string, error) {
 	for {
 		p, err := reader.NextPart()
-		//if err == io.EOF {
-		//	return "", io.EOF
-		//}
 		if err != nil {
 			return "", err
 		}

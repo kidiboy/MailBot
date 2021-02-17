@@ -77,9 +77,6 @@ func sendToTgm(sbj string, text string, conf Conf, to string, logger *logging.Lo
 		sendText = text
 	}
 
-	//var url *url2.URL
-	//var err error
-
 	notifyChats := conf.NotifyChats
 
 	requiredChat := findNotifyChat(to, notifyChats, logger)
@@ -87,65 +84,9 @@ func sendToTgm(sbj string, text string, conf Conf, to string, logger *logging.Lo
 	tgmUrl, err := createTgmUrl(requiredChat, conf, sendText, logger)
 	if err != nil {
 		logger.Error(err)
-		//log.Println(err)
 	}
 
 	sendHttpRequest(tgmUrl, logger)
-
-	/*cnt := len(conf.NotifyChats)
-	for key, value := range conf.NotifyChats {
-		fmt.Printf("key: %+v; value: %+v ", key, value)
-		cnt -= 1
-		fmt.Println(cnt)
-
-		if to == value.Email {
-			fmt.Println("Email found")
-			prt := strconv.Itoa(conf.ProxyTgm.Port) //Convert Int to String
-			wp := strconv.FormatBool(!value.WebPagePreview)
-			ntf := strconv.FormatBool(!value.Notification)
-			p := "http://" + conf.ProxyTgm.Ip + ":" + prt + "/" + conf.TgmToken + "/sendMessage?chat_id=" +
-				value.ChatId + "&parse_mode=" + conf.TgmParseMode + "&disable_web_page_preview=" + wp +
-				"&disable_notification=" + ntf + "&text=" + url2.QueryEscape(sendText)
-			fmt.Printf(p)
-			url, err = url2.Parse(p)
-			break
-		} else if cnt == 0 {
-			prt := strconv.Itoa(conf.ProxyTgm.Port) //Convert Int to String
-			wp := strconv.FormatBool(!conf.NotifyChats["chat_rest"].WebPagePreview)
-			ntf := strconv.FormatBool(!conf.NotifyChats["chat_rest"].Notification)
-			p := "http://" + conf.ProxyTgm.Ip + ":" + prt + "/" + conf.TgmToken + "/sendMessage?chat_id=" +
-				conf.NotifyChats["chat_rest"].ChatId + "&parse_mode=" + conf.TgmParseMode +
-				"&disable_web_page_preview=" + wp + "&disable_notification=" + ntf + "&text=" +
-				url2.QueryEscape(sendText)
-			fmt.Println(p)
-			url, err = url2.Parse(p)
-			fmt.Println("Email not found, chat_rest")
-		}
-	}
-
-	fmt.Println(&url)
-	//fmt.Println(r.Form)
-
-	//generating the HTTP GET request
-	request, err := http.NewRequest("GET", url.String(), nil)
-	if err != nil {
-		log.Println(err)
-	}
-
-	//calling the URL
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		log.Println(err)
-	}
-
-	//getting the response
-	statuscode := response.StatusCode
-	data, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		log.Println(err)
-	}
-	//printing the response
-	log.Println(statuscode, string(data))*/
 }
 
 func sendHttpRequest(tgmUrl *url2.URL, logger *logging.Logger) error {
@@ -153,7 +94,6 @@ func sendHttpRequest(tgmUrl *url2.URL, logger *logging.Logger) error {
 	request, err := http.NewRequest("GET", tgmUrl.String(), nil)
 	if err != nil {
 		logger.Error(err)
-		//log.Println(err)
 		return err
 	}
 
@@ -161,7 +101,6 @@ func sendHttpRequest(tgmUrl *url2.URL, logger *logging.Logger) error {
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
 		logger.Error(err)
-		//log.Println(err)
 		return err
 	}
 
@@ -170,23 +109,18 @@ func sendHttpRequest(tgmUrl *url2.URL, logger *logging.Logger) error {
 	data, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		logger.Error(err)
-		//log.Println(err)
 		return err
 	}
 	//printing the response
 	logger.Debug(statusCode, string(data))
-	//log.Println(statusCode, string(data))
 	return nil
 }
 
 func findNotifyChat(to string, notifyChats map[string]NotifyChat, logger *logging.Logger) NotifyChat {
-	//cnt := len(notifyChats)
 	for key, currChat := range notifyChats {
 		logger.Debugf("key: %+v; currChat: %+v ", key, currChat)
-		//fmt.Printf("key: %+v; currChat: %+v ", key, currChat)
 		if to == currChat.Email {
 			logger.Debugf("Email found: %s", currChat.Email)
-			//fmt.Println("Email found")
 			return currChat
 		}
 	}
@@ -202,11 +136,9 @@ func createTgmUrl(requiredChat NotifyChat, conf Conf, sendText string, logger *l
 		"&parse_mode=" + conf.TgmParseMode + "&disable_web_page_preview=" + wp + "&disable_notification=" + ntf +
 		"&text=" + url2.QueryEscape(sendText)
 	logger.Debugf("strUrl: %s", strUrl)
-	//fmt.Println(strUrl)
 	url, err := url2.Parse(strUrl)
 	if err != nil {
 		logger.Error(err)
-		//log.Println(err)
 		return nil, err
 	}
 	return url, nil
@@ -238,20 +170,12 @@ func main() {
 	smtpBackend := logging.AddModuleLevel(
 		logging.NewBackendFormatter(
 			logging.NewLogBackend(os.Stdout, "", 0), format))
-	//backend.SetLevel(logging.INFO, "")
 	smtpLog.SetBackend(smtpBackend)
 
 	httpBackend := logging.AddModuleLevel(
 		logging.NewBackendFormatter(
 			logging.NewLogBackend(os.Stdout, "", 0), format))
-	//backend.SetLevel(logging.INFO, "")
 	httpLog.SetBackend(httpBackend)
-
-	//log.Info("info")
-	//log.Notice("notice")
-	//log.Warning("warning")
-	//log.Error("err")
-	//log.Critical("crit")
 
 	var confPath string
 
